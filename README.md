@@ -30,8 +30,8 @@ All routes in this service are mounted under **`/ipg`**.
 | **Hosted checkout** | `GET https://sandboxipgpayment.payable.lk/sandbox/?uid={SESSION_UID}` (returned as `paymentPage`) |
 | **Live** |
 | **Token endpoint** | `POST https://ipgpayment.payable.lk/ipg/auth/direct-api` |
-| **Session endpoint** | `POST https://ipgpayment.payable.lk/ipg/live/direct-api` |
-| **Hosted checkout** | `GET https://ipgpayment.payable.lk/ipg/live/?uid={SESSION_UID}` (returned as `paymentPage`) |
+| **Session endpoint** | `POST https://ipgpayment.payable.lk/ipg/pro/direct-api` |
+| **Hosted checkout** | `GET https://ipgpayment.payable.lk/ipg/pro/?uid={SESSION_UID}` (returned as `paymentPage`) |
 
 ---
 
