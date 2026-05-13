@@ -27,11 +27,9 @@ All routes in this service are mounted under **`/ipg`**.
 | **Sandbox** |
 | **Token endpoint** | `POST https://sandboxipgpayment.payable.lk/ipg/auth/direct-api` |
 | **Session endpoint** | `POST https://sandboxipgpayment.payable.lk/ipg/sandbox/direct-api` |
-| **Hosted checkout** | `GET https://sandboxipgpayment.payable.lk/sandbox/?uid={SESSION_UID}` (returned as `paymentPage`) |
 | **Live** |
 | **Token endpoint** | `POST https://ipgpayment.payable.lk/ipg/auth/direct-api` |
 | **Session endpoint** | `POST https://ipgpayment.payable.lk/ipg/pro/direct-api` |
-| **Hosted checkout** | `GET https://ipgpayment.payable.lk/ipg/pro/?uid={SESSION_UID}` (returned as `paymentPage`) |
 
 ---
 
@@ -102,7 +100,7 @@ Send a JSON object with below mandatory and optional fields.
 | `merchantKey` | Must match the merchant used in step 1. |
 | `checkValue` | Server-side digest (see **checkValue**). |
 | `invoiceId` | Merchant invoice / order id. |
-| `currencyCode` | `USD`, `GBP`, `EURO`, `LKR`, or `EUR`. |
+| `currencyCode` | `LKR`, `USD`, `GBP`, or `EUR`. |
 | `paymentType` | `1` for one-time. |
 | `amount` | String with two decimals, e.g. `"10.00"`. |
 | `orderDescription` | Short description. |
