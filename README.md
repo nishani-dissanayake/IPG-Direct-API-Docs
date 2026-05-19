@@ -14,7 +14,7 @@ You need to obtain the following credentials from PAYable to proceed:
 - **Business Key** - Provided by PAYable
 - **Business Token** - Provided by PAYable
 
-When the customer pays, they complete the card details entry process on PAYable’s hosted pages. Your app never collects raw card data. After you create a session, navigate the customer to the **`paymentPage`** URL. When payment completes, PAYable can notify your backend at the URL you configure (**`notifyUrl`**).
+When the customer pays, they complete the card details entry process on PAYable’s hosted pages. Your app never collects raw card data. After you create a session, navigate the customer to the **`paymentPage`** URL. When payment completes, PAYable can notify your backend at the URL you configure (**`webhookUrl`**).
 
 ---
 
@@ -110,7 +110,7 @@ Send a JSON object with below mandatory and optional fields based on your paymen
 | `returnUrl` | HTTPS customer return URL. |
 | `originDomain` | **Web:** required if web (HTTPS merchant URL to indicate where the request originates from) (must match step 1). |
 | `packageName` | **Mobile:** required if mobile (must match step 1). |
-| `notifyUrl` | HTTPS server callback URL. |
+| `webhookUrl` | HTTPS server callback URL. |
 
 **Optional**
 
@@ -377,7 +377,7 @@ UPPERCASE(SHA512[merchantId|invoiceId|amount|currencyCode|customerId|tokenId|UPP
   "orderDescription": "Order 123",
   "logoUrl": "https://domain/your_logo_url",
   "returnUrl": "https://domain/your_return_url",
-  "notifyUrl": "https://domain/your_notify_url",
+  "webhookUrl": "https://domain/your_webhook_url",
   "originDomain": "https://your_origin_domain",
   "customerFirstName": "Customer First Name",
   "customerLastName": "Customer Last Name",
@@ -454,10 +454,10 @@ Authentication or origin/package mismatch may return **`401`** or **`400`** with
 
 ## Listening to payment notifications
 
-PAYable calls your **webhook** URL server-to-server (the URL you supply as **`notifyUrl`**).
+PAYable calls your **webhook** URL server-to-server (the URL you supply as **`webhookUrl`**).
 
 - The callback is **not** loaded in the browser. You can test by updating your database when the endpoint is hit.
-- **`notifyUrl`** must use a **public HTTPS** host. **localhost** will not receive production callbacks.
+- **`webhookUrl`** must use a **public HTTPS** host. **localhost** will not receive production callbacks.
 
 ### Typical callback payload (one time, recurring)
 
