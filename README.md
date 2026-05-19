@@ -1,35 +1,35 @@
 # PAYable IPG — Direct API Integration Guide
 
-PAYable **Direct API** lets your **server** start a hosted checkout using JSON over HTTPS: first obtain a short-lived **access token**, then create a session and **redirect the customer** to the returned payment page. This guide describes that flow end-to-end.
+PAYable **Direct API** facilitates you to start a hosted checkout using JSON over HTTPS. You have to first obtain a short-lived **access token**, then create a payment session, and **redirect the customer** to the returned payment page. This guide describes that flow end-to-end.
 
 ---
 
 ## The PAYable Direct API integration
 
-You need credentials from PAYable:
+You need to obtain the following credentials from PAYable to proceed:
 
-- **Merchant Key** — identifier for your merchant account (provided by PAYable).  
-- **Merchant Token** — secret used only on your server to build **`checkValue`** digests (never expose it in the browser or mobile app) (provided by PAYable).
+- **Merchant Key** — Identifier for your merchant account.  
+- **Merchant Token** — A secret used only on your server to build the **`checkValue`** digests. Make sure not expose this token in the browser or mobile app.
 
-- **Business Key** - provided by PAYable
-- **Business Token** - provided by PAYable
+- **Business Key** - Provided by PAYable
+- **Business Token** - Provided by PAYable
 
-When the customer pays, they complete card entry on PAYable’s hosted pages. Your app never collects raw card data. After you create a session, send the customer to the **`paymentPage`** URL; when payment completes, PAYable can notify your backend at the URL you configure (**`notifyUrl`**).
+When the customer pays, they complete the card details entry process on PAYable’s hosted pages. Your app never collects raw card data. After you create a session, navigate the customer to the **`paymentPage`** URL. When payment completes, PAYable can notify your backend at the URL you configure (**`notifyUrl`**).
 
 ---
 
-## Environments and base URL
+## Environments and base URLs
 
 All routes in this service are mounted under **`/ipg`**.
 
 | Item | Value |
 |------|--------|
 | **Sandbox** |
-| **Token endpoint** | `POST https://sandboxipgpayment.payable.lk/ipg/auth/direct-api` |
-| **Session endpoint** | `POST https://sandboxipgpayment.payable.lk/ipg/sandbox/direct-api` |
+| **Auth endpoint** | `POST https://sandboxipgpayment.payable.lk/ipg/auth/direct-api` |
+| **Direct payment API endpoint** | `POST https://sandboxipgpayment.payable.lk/ipg/sandbox/direct-api` |
 | **Live** |
-| **Token endpoint** | `POST https://ipgpayment.payable.lk/ipg/auth/direct-api` |
-| **Session endpoint** | `POST https://ipgpayment.payable.lk/ipg/pro/direct-api` |
+| **Auth endpoint** | `POST https://ipgpayment.payable.lk/ipg/auth/direct-api` |
+| **Direct payment API endpoint** | `POST https://ipgpayment.payable.lk/ipg/pro/direct-api` |
 
 ---
 
@@ -42,15 +42,17 @@ All routes in this service are mounted under **`/ipg`**.
 **Headers**
 
 - `Content-Type: application/json`
-- `Authorization: <base64(businessKey:businessToken)>` — concatenate **businessKey**, a single colon **`:`**, and **businessToken**; Base64-encode the result.
+- `Authorization: <base64(businessKey:businessToken)>` — Concatenate your **businessKey**, a single colon **`:`**, and the **businessToken**. Base64-encode the result.
 
 **Body (JSON)**
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `grant_type` | Yes | Grant type string accepted by PAYable for your integration. |
-| `packageName` | *Conditional* | Non-empty for **native / app** flows (Mobile integration). |
-| `originDomain` | *Conditional* | For **web** flows, your HTTPS origin. |
+| `grant_type` | Yes | Grant type string accepted by PAYable for your integration. Refer to the example below. |
+| `packageName` | *Conditional* | Should be non-empty for **native / app** flows (mobile integration). |
+| `originDomain` | *Conditional* | Should be non-empty for **web** flows. |
+
+**Note:** Please do not enter both `pakcageName` and `originDomain`. Only one is needed.
 
 **Example (web)**
 
@@ -83,11 +85,11 @@ Note: The Access Token expires in 5 minutes.
 **Headers**
 
 - `Content-Type: application/json`
-- `Authorization: Bearer <accessToken>` — must be the same token returned by step 1, for the same **`merchantKey`** in the body. It should not be expired.
+- `Authorization: Bearer <accessToken>` — This need to be the same token returned by step 1, for the same **`merchantKey`** in the body. Make sure it is not expired.
 
 **Body**
 
-Send a JSON object with below mandatory and optional fields.
+Send a JSON object with below mandatory and optional fields based on your payment type. Payment type 1 indicates one time payments, type 2 indicates recurring payments, and type 3 indicates tokenized payments.
 
 ---
 
@@ -98,15 +100,15 @@ Send a JSON object with below mandatory and optional fields.
 | Field | Notes |
 |-------|--------|
 | `merchantKey` | Must match the merchant used in step 1. |
-| `checkValue` | Server-side digest (see **checkValue**). |
-| `invoiceId` | Merchant invoice / order id. |
+| `checkValue` | Server-side digest (see **section 4. Check Value**). |
+| `invoiceId` | Customer's invoice id. |
 | `currencyCode` | `LKR`, `USD`, `GBP`, or `EUR`. |
 | `paymentType` | `1` for one-time. |
 | `amount` | String with two decimals, e.g. `"10.00"`. |
 | `orderDescription` | Short description. |
 | `logoUrl` | HTTPS logo URL. |
 | `returnUrl` | HTTPS customer return URL. |
-| `originDomain` | **Web:** required if web (HTTPS merchant URL where the request originates from) (must match step 1). |
+| `originDomain` | **Web:** required if web (HTTPS merchant URL to indicate where the request originates from) (must match step 1). |
 | `packageName` | **Mobile:** required if mobile (must match step 1). |
 | `notifyUrl` | HTTPS server callback URL. |
 
@@ -128,37 +130,36 @@ Send a JSON object with below mandatory and optional fields.
 | `billingAddressStreet` | Required | **[Optional Mode]** Optional (may omit or empty). |
 | `billingAddressCity` | Required | **[Optional Mode]** Optional (may omit or empty). |
 | `billingAddressPostcodeZip` | Required | **[Optional Mode]** Optional (may omit or empty). |
-| `billingAddressCountry` | Required (e.g. `LKR`) | **[Optional Mode]** Optional (may omit or empty). |
+| `billingAddressCountry` | Required (e.g. `LK`) | **[Optional Mode]** Optional (may omit or empty). |
 | `billingCompanyName` | Optional | Optional |
 | `billingAddressStreet2` | Optional | Optional |
 | `billingAddressStateProvince` | Optional | Optional |
 
-**Rule (Optional Mode on, `paymentType` = `1` only):** at least **one** of **`customerEmail`** or **`customerMobilePhone`** must be non-empty.
+**Rule (When Optional Mode is switched on and when `paymentType` = `1` only):** at least **one** of **`customerEmail`** or **`customerMobilePhone`** fields must be non-empty.
 
-**Shipping** — all fields optional (`shippingContact*`, `shippingCompanyName`, `shippingAddress*`).
+**Shipping** — All shipping fields are optional (`shippingContactFirstName`,`shippingContactLastName`, `shippingContactMobilePhone`, `shippingContactPhone`, `shippingContactEmail`, `shippingCompanyName`, `shippingAddressStreet`, `shippingAddressStreet2`, `shippingAddressCity`, `shippingAddressStateProvince`, `shippingAddressCountry`, shippingAddressPostcodeZip`).
 
 ---
 
-#### 2.2 Recurring — `paymentType` = `2`
+#### 2.2 Recurring Payments — `paymentType` = `2`
 
 **Additional mandatory fields**
 
 | Field | Requirement | Notes |
 |-------|-------------|--------|
-| `interval` | Mandatory | `MONTHLY`, `QUARTERLY`, `ANNUALLY`, `WEEKLY`, or `DAILY`. |
+| `interval` | Mandatory | `MONTHLY`, `QUARTERLY`, and `ANNUALLY`. |
 | `doFirstPayment` | Mandatory | `"0"` or `"1"`. |
 | `recurringAmount` | Mandatory | Two-decimal string. |
 | `startDate` | Mandatory | Date `YYYY-MM-DD`. |
 | `endDate` | Mandatory | Date `YYYY-MM-DD` or string **`FOREVER`**. |
 | `isRetry` | Mandatory | **`"0"`** or **`"1"`** only. |
 | `retryAttempts` | Mandatory |  |
-| `amount` | Mandatory | Two-decimal string. |
 
 **Customer & billing — `paymentType` = `2`**
 
 | Field | Standard | With Optional Mode **on** |
 |-------|----------|---------------------------|
-| `customerFirstName`, `customerLastName`, `customerEmail` | Required | **Still required** (not relaxed for recurring). |
+| `customerFirstName`, `customerLastName`, `customerEmail` | Required | **Still required** (not optional for recurring payments). |
 | `customerMobilePhone` | Required | **[Optional Mode]** Optional. |
 | `billingAddressStreet`, `billingAddressCity`, `billingAddressPostcodeZip`, `billingAddressCountry` | Required | **[Optional Mode]** Optional (may omit or empty). |
 | Other customer/billing/shipping | Same as 2.1 | Same pattern: company / street2 / state / phone / shipping optional; **[Optional Mode]** also relaxes the billing address lines above. |
@@ -166,7 +167,7 @@ Send a JSON object with below mandatory and optional fields.
 
 ---
 
-#### 2.3 Tokenized one-time — `paymentType` = `3`
+#### 2.3 Tokenized Payments — `paymentType` = `3`
 
 **Additional mandatory fields**
 
@@ -174,16 +175,16 @@ Send a JSON object with below mandatory and optional fields.
 |-------|-------------|--------|
 | `isSaveCard` | Mandatory | `0` or `1`. |
 | `doFirstPayment` | Mandatory if `isSaveCard` = `1` | `"0"` or `"1"`. |
-| `customerRefNo` | Mandatory if `isSaveCard` = `1` | Your customer reference. |
+| `customerRefNo` | Mandatory if `isSaveCard` = `1` | Your customer reference number. |
 | `amount` | Mandatory | If `isSaveCard` = `1` and `doFirstPayment` = `0`, amount must be **`0.00`**. |
 
 **Customer & billing — `paymentType` = `3`**
 
 | Field | Standard | With Optional Mode **on** |
 |-------|----------|---------------------------|
-| `customerFirstName`, `customerLastName`, `customerEmail` | Required | **Still required** (optional mode does not relax these for type `3`). |
+| `customerFirstName`, `customerLastName`, `customerEmail` | Required | **Still required** (not optional for tokenized payments). |
 | `customerMobilePhone` | Required | **[Optional Mode]** Optional. |
-| Billing address lines / country | Required | **[Optional Mode]** Optional (same pattern as §2.1 / §2.2). |
+| Billing address lines / country | Required | **[Optional Mode]** Optional (same pattern as 2.2). |
 
 ---
 
@@ -210,9 +211,9 @@ Send a JSON object with below mandatory and optional fields.
 
 `UPPERCASE(SHA512[<merchantKey>|<invoiceId>|<amount>|<currencyCode>|UPPERCASE(SHA512[<merchantToken>])])`
 
-#### 4.2 For tokenize payments (paymentType = 3 )
+#### 4.2 Format for tokenize payments (paymentType = 3 )
 
-Format: `UPPERCASE(SHA512[<merchantKey>|<invoiceId>|<amount>|<currencyCode>|<customerRefNo>|UPPERCASE(SHA512[<merchantToken>])])`
+`UPPERCASE(SHA512[<merchantKey>|<invoiceId>|<amount>|<currencyCode>|<customerRefNo>|UPPERCASE(SHA512[<merchantToken>])])`
 
 - Pipe `|` is the literal separator between segments.
 
@@ -363,7 +364,7 @@ UPPERCASE(SHA512[merchantId|invoiceId|amount|currencyCode|customerId|tokenId|UPP
 
 ---
 
-## Sample session payload (one-time, web)
+## Sample Session Payload (one-time, web)
 
 ```json
 {
@@ -455,8 +456,8 @@ Authentication or origin/package mismatch may return **`401`** or **`400`** with
 
 PAYable calls your **webhook** URL server-to-server (the URL you supply as **`notifyUrl`**).
 
-- The callback is **not** loaded in the browser; test by updating your database when the endpoint is hit.
-- **`notifyUrl`** must use a **public HTTPS** host; **localhost** will not receive production callbacks.
+- The callback is **not** loaded in the browser. You can test by updating your database when the endpoint is hit.
+- **`notifyUrl`** must use a **public HTTPS** host. **localhost** will not receive production callbacks.
 
 ### Typical callback payload (one time, recurring)
 
