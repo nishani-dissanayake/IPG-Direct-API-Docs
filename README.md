@@ -91,9 +91,9 @@ Send a JSON object with below mandatory and optional fields.
 
 ---
 
-#### 2.1 General (one-time) — `paymentType` = `1`
+#### 2.1 Common fields
 
-**Mandatory**
+**Mandatory for all three payment types (1, 2, 3)**
 
 | Field | Notes |
 |-------|--------|
@@ -141,6 +141,8 @@ Send a JSON object with below mandatory and optional fields.
 
 #### 2.2 Recurring — `paymentType` = `2`
 
+**Additional mandatory fields**
+
 | Field | Requirement | Notes |
 |-------|-------------|--------|
 | `interval` | Mandatory | `MONTHLY`, `QUARTERLY`, `ANNUALLY`, `WEEKLY`, or `DAILY`. |
@@ -165,6 +167,8 @@ Send a JSON object with below mandatory and optional fields.
 ---
 
 #### 2.3 Tokenized one-time — `paymentType` = `3`
+
+**Additional mandatory fields**
 
 | Field | Requirement | Notes |
 |-------|-------------|--------|
@@ -200,13 +204,162 @@ Send a JSON object with below mandatory and optional fields.
 
 ---
 
-## checkValue
+### 4. Check Value
 
-**Format:**
+#### 4.1 Format for regular one time and recurring payments:
 
 `UPPERCASE(SHA512[<merchantKey>|<invoiceId>|<amount>|<currencyCode>|UPPERCASE(SHA512[<merchantToken>])])`
 
+#### 4.2 For tokenize payments (paymentType = 3 )
+
+Format: `UPPERCASE(SHA512[<merchantKey>|<invoiceId>|<amount>|<currencyCode>|<customerRefNo>|UPPERCASE(SHA512[<merchantToken>])])`
+
 - Pipe `|` is the literal separator between segments.
+
+---
+
+### 5. Additional Tokenization Features
+
+- **Live Root URL**: `POST https://ipgpayment.payable.lk`
+- **Sandbox Root URL**: `POST https://sandboxipgpayment.payable.lk`
+
+#### 5.1. List Saved Cards
+
+Retrieve all saved cards for a customer.
+
+**Endpoint**: `POST {{rootUrl}}/ipg/v2/tokenize/listCard`
+
+**Headers Required**:
+
+```
+Content-Type: application/json
+```
+
+**Required Parameters**:
+
+- `merchantId` - Your merchant ID
+- `customerId` - Customer ID
+- `checkValue` - Security hash
+
+**CheckValue Generation:**
+
+```
+UPPERCASE(SHA512[merchantId|customerId|UPPERCASE(SHA512[merchantToken])])
+```
+
+#### 5.2. Delete Saved Card
+
+Remove a saved card from customer's account.
+
+**Endpoint**: `POST {{rootUrl}}/ipg/v2/tokenize/deleteCard`
+
+**Headers Required**:
+
+```
+Content-Type: application/json
+```
+
+**Required Parameters**:
+
+- `merchantId` - Your merchant ID
+- `customerId` - Customer ID
+- `tokenId` - Token ID to delete
+- `checkValue` - Security hash
+
+**CheckValue Generation:**
+
+```
+UPPERCASE(SHA512[merchantId|customerId|tokenId|UPPERCASE(SHA512[merchantToken])])
+```
+
+#### 5.3. Edit Saved Card
+
+Update card nickname or set as default card.
+
+**Endpoint**: `POST {{rootUrl}}/ipg/v2/tokenize/editCard`
+
+**Headers Required**:
+
+```
+Content-Type: application/json
+Authorization: Bearer {access_token}
+```
+
+**How to Generate JWT Access Token**:
+
+1. Create Basic Auth token: `base64(businessKey:businessToken)`
+2. POST to `{{rootUrl}}/ipg/v2/auth/tokenize` with headers:
+   ```
+   Content-Type: application/json
+   Authorization: {basicAuthToken}
+   ```
+   Body: `{"grant_type": "client_credentials"}`
+3. Extract `accessToken` from response and use in Authorization header
+
+**Required Parameters**:
+
+- `merchantId` - Get it from 1st callback
+- `customerId` - Get it from 1st callback
+- `tokenId` - Get it from list card API
+- `nickName` - Optional nickname for the card
+- `isDefaultCard` - Set as default card (0 or 1)
+- `checkValue` - Security hash
+
+**CheckValue Generation:**
+
+```
+UPPERCASE(SHA512[merchantId|customerId|tokenId|UPPERCASE(SHA512[merchantToken])])
+```
+
+#### 5.4. Pay with Saved Card
+
+Process payment using a previously saved card token.
+
+**Endpoint**: `POST {{rootUrl}}/ipg/v2/tokenize/pay`
+
+**Headers Required**:
+
+```
+Content-Type: application/json
+Authorization: Bearer {access_token}
+```
+
+**How to Generate Access Token**:
+
+1. Create Basic Auth token: `base64(businessKey:businessToken)`
+2. POST to `{{rootUrl}}/ipg/v2/auth/tokenize` with headers:
+   ```
+   Content-Type: application/json
+   Authorization: {basicAuthToken}
+   ```
+   Body: `{"grant_type": "client_credentials"}`
+3. Extract `accessToken` from response and use in Authorization header
+
+**Required Parameters**:
+
+- `merchantId` - Get it from 1st callback
+- `customerId` - Get it from 1st callback
+- `tokenId` - Get it from list card API
+- `invoiceId` - Invoice ID
+- `amount` - Payment amount
+- `currencyCode` - Currency code
+- `checkValue` - Security hash
+- `webhookUrl` - Webhook URL for notifications (https://yoursite.com/webhook/payment)
+
+**Optional Parameters**:
+
+- `custom1` - Custom field 1 for merchant-specific data
+- `custom2` - Custom field 2 for merchant-specific data
+
+**CheckValue Generation:**
+
+```
+UPPERCASE(SHA512[merchantId|invoiceId|amount|currencyCode|customerId|tokenId|UPPERCASE(SHA512[merchantToken])])
+```
+
+#### 5.5. Add Card
+
+**Note:** Follow the same process as section 2.3 to save the card.
 
 ---
 
@@ -239,6 +392,47 @@ Send a JSON object with below mandatory and optional fields.
 Adjust fields to match your environment and merchant settings. Mobile flows include **`packageName`** and omit **`originDomain`**.
 
 ---
+### Check Value Validation
+
+**Formula for Webhook Validation (One-Time Payment):**
+
+```
+UPPERCASE(SHA512[merchantKey|payableOrderId|payableTransactionId|payableAmount|currencyCode|invoiceNo|statusCode|UPPERCASE(SHA512[merchantToken])])
+```
+
+**Formula for Tokenize Payment Webhook Validation (paymentType = 3):**
+
+```
+UPPERCASE(SHA512[merchantKey|payableOrderId|payableTransactionId|payableAmount|currencyCode|invoiceNo|statusCode|customerRefNo|UPPERCASE(SHA512[merchantToken])])
+```
+
+```javascript
+// Validate webhook response
+function validateWebhook(webhookData, merchantToken) {
+  const calculatedCheckValue = CryptoJS.SHA512(
+    webhookData.merchantKey +
+      "|" +
+      webhookData.payableOrderId +
+      "|" +
+      webhookData.payableTransactionId +
+      "|" +
+      webhookData.payableAmount +
+      "|" +
+      webhookData.payableCurrency +
+      "|" +
+      webhookData.invoiceNo +
+      "|" +
+      webhookData.statusCode +
+      "|" +
+      CryptoJS.SHA512(merchantToken).toString().toUpperCase()
+  )
+    .toString()
+    .toUpperCase();
+
+  return calculatedCheckValue === webhookData.checkValue;
+}
+```
+---
 
 ## Payment-related errors
 
@@ -264,7 +458,7 @@ PAYable calls your **webhook** URL server-to-server (the URL you supply as **`no
 - The callback is **not** loaded in the browser; test by updating your database when the endpoint is hit.
 - **`notifyUrl`** must use a **public HTTPS** host; **localhost** will not receive production callbacks.
 
-### Typical callback payload
+### Typical callback payload (one time, recurring)
 
 | Field | Description |
 |-------|-------------|
@@ -281,6 +475,30 @@ PAYable calls your **webhook** URL server-to-server (the URL you supply as **`no
 | `cardHolderName`, `cardNumber` | Present when applicable (masked PAN) |
 | `checkValue` |  |
 
+### Typical callback payload (tokenized)
+
+| Field | Description |
+|-------|-------------|
+| `merchantKey` | Merchant identifier |
+| `payableOrderId` | PAYable order id |
+| `payableTransactionId` | Transaction reference |
+| `payableAmount` | Amount |
+| `payableCurrency` | Currency |
+| `invoiceNo` | Your invoice id |
+| `statusCode` | Numeric status |
+| `statusMessage` | e.g. `SUCCESS` / `FAILURE` |
+| `paymentType`, `paymentMethod`, `paymentScheme` | Payment metadata |
+| `custom1`, `custom2` |  |
+| `cardHolderName`, `cardNumber` | Present when applicable (masked PAN) |
+| `checkValue` |  |
+| `paymentId` | Your payment id |
+| `customerRefNo` | Your customer reference number |
+| `token`, `tokenId`, `maskedCardNo`, `exp`, `reference`, `nickname`, `tokenStatus`, `defaultCard` | Token details |
+| `merchantId` | Your merchant id |
+| `customerId` | Your customer id |
+| `uid` | Your uid |
+| `statusIndicator` |  |
+
 ### Acknowledging the callback
 
 Respond with JSON such as:
@@ -289,6 +507,8 @@ Respond with JSON such as:
 {
   "Status": 200
 }
+
+
 ```
 
 ---
