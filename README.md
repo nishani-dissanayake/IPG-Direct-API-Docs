@@ -299,7 +299,6 @@ Authorization: Bearer {access_token}
 
 **Required Parameters**:
 
-- `merchantId` - Get it from 1st callback
 - `customerId` - Get it from 1st callback
 - `tokenId` - Get it from list card API
 - `nickName` - Optional nickname for the card
